@@ -56,8 +56,8 @@ const ModalMusic = () => {
             <Ionicons name={isTrackPlaying ? "pause" : "play"} size={31} color={"#F1F6F9"} />
           </View>
           <View>
-            <Text style={{ color: colors.text }}>{item.audioName}</Text>
-            <Text style={{ color: colors.lightText, fontSize: 12 }}>{item.artist}</Text>
+            <Text style={{ color: colors.text, fontFamily: "Vazirmatn-SemiBold" }}>{item.audioName}</Text>
+            <Text style={{ color: colors.lightText, fontSize: 12, fontFamily: "Vazirmatn-SemiBold" }}>{item.artist}</Text>
           </View>
         </View>
       </TouchableHighlight>
@@ -134,10 +134,10 @@ const ModalMusic = () => {
       {showArtwork && lastTrack.artwork ? <Artwork /> : false}
       <View style={{ flexDirection: 'row', backgroundColor: colors.undetlay, height: 50, alignItems: 'center', justifyContent: "flex-start", paddingHorizontal: 20 }}>
         <Ionicons onPress={handleBack} name="arrow-back-outline" size={29} color={colors.text} />
-        <TextInput placeholder='Search' ref={searchInput} cursorColor={colors.lightText} onChangeText={handleSearch} placeholderTextColor={colors.lightText} style={{ width: "87%", marginLeft: 12, fontSize: 20, color: colors.text, display: openSearch ? 'flex' : 'none' }} />
+        <TextInput placeholder='Search' ref={searchInput} cursorColor={colors.lightText} onChangeText={handleSearch} placeholderTextColor={colors.lightText} style={{ width: "87%", marginLeft: 12, fontSize: 20, color: colors.text, display: openSearch ? 'flex' : 'none', fontFamily: "Vazirmatn-SemiBold" }} />
         {!openSearch &&
           <>
-            <Text style={{ color: colors.text, fontSize: 23, fontWeight: '700', marginLeft: 12 }}>{contact?.name}</Text>
+            <Text style={{ color: colors.text, fontSize: 23, marginLeft: 12,fontFamily: "Vazirmatn-Black" }}>{contact?.name}</Text>
             <Ionicons onPress={() => {
               setOpenSearch(true);
               searchInput.current?.focus();
@@ -164,8 +164,8 @@ const ModalMusic = () => {
       <View style={[styles.controllerContainer, { backgroundColor: colors.undetlay }]}>
         <View style={styles.infoController}>
           <View style={{ marginRight: 'auto' }}>
-            <Text style={{ color: colors.text }}>{lastTrack?.name}</Text>
-            <Text style={{ color: colors.lightText, fontSize: 12 }}>{lastTrack?.artist}</Text>
+            <Text style={{ color: colors.text,fontFamily: "Vazirmatn-SemiBold" }}>{lastTrack?.name}</Text>
+            <Text style={{ color: colors.lightText, fontSize: 12,fontFamily: "Vazirmatn-SemiBold" }}>{lastTrack?.artist}</Text>
           </View>
           <View style={{ width: 55, height: 55, marginLeft: 'auto', borderRadius: 9, overflow: 'hidden' }}>
             {lastTrack.artwork ? <Pressable onPress={() => setShowArtwork(true)}>
@@ -186,8 +186,8 @@ const ModalMusic = () => {
               onSlidingComplete={onSlidingComplete}
             />
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginHorizontal: 15 }}>
-              <Text style={{ color: colors.text }}>{currentPositionTime}</Text>
-              <Text style={{ color: colors.text }}>{time}</Text>
+              <Text style={{ color: colors.text,fontFamily: "Vazirmatn-SemiBold" }}>{currentPositionTime}</Text>
+              <Text style={{ color: colors.text,fontFamily: "Vazirmatn-SemiBold" }}>{time}</Text>
             </View>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 5, alignItems: 'center', position: 'relative' }}>

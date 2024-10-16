@@ -15,6 +15,7 @@ export const usePushNotifications = (): PushNotificationState => {
       shouldPlaySound: false,
       shouldShowAlert: true,
       shouldSetBadge: false,
+      priority: Notifications.AndroidNotificationPriority.HIGH
     }),
   });
 
@@ -28,20 +29,20 @@ export const usePushNotifications = (): PushNotificationState => {
   async function registerForPushNotificationsAsync() {
     let token;
     if (!Device.isDevice) return;
-      const { status: existingStatus } =
+    const { status: existingStatus } =
       await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+    let finalStatus = existingStatus;
 
-      if (existingStatus !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== "granted") {
-        return;
-      }
-      token = await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas.projectId,
-      });
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") {
+      return;
+    }
+    token = await Notifications.getExpoPushTokenAsync({
+      projectId: Constants.expoConfig?.extra?.eas.projectId,
+    });
 
     Notifications.setNotificationChannelAsync("default", {
       name: "default",
@@ -53,19 +54,21 @@ export const usePushNotifications = (): PushNotificationState => {
   }
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then((token) => {
-      setExpoPushToken(token);
-    });
-
-    notificationListener.current =
+      registerForPushNotificationsAsync().then((token) => {
+        setExpoPushToken(token);
+      });
+      
+      notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
+        console.log(notification, 'notification');
         setNotification(notification);
       });
-
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log(response);
-      });
+      
+      responseListener.current =
+        Notifications.addNotificationResponseReceivedListener((response) => {
+          console.log(response, 'response');
+          console.log(response);
+        });
 
     return () => {
       notificationListener.current &&

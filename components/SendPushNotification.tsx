@@ -53,9 +53,9 @@ export default function PushNotificationSend({ user, contactToken,roomId }: { us
             <View style={[styles.container, StyleSheet.absoluteFill]} >
                 <View style={[styles.modal, { backgroundColor: colors.card }]}>
                     <Ionicons onPress={() => setOpen(false)} name='close-circle' size={35} color={colors.red} style={{ marginVertical: 15 }} />
-                    <Text style={[styles.Available, { color: colors.text }]}>{i18n.t("UserAvailable")}</Text>
-                    <Text style={[styles.Notification, { color: colors.text }]}>{i18n.t("MessageNotification")}</Text>
-                    <TextInput style={[styles.Input, { color: colors.text, borderColor: colors.mirza }]} blurOnSubmit placeholderTextColor={colors.mirza} placeholder='Message...' onChangeText={setValue} />
+                    <Text style={[styles.Available, { color: colors.text,fontFamily: "Vazirmatn-SemiBold" }]}>{i18n.t("UserAvailable")}</Text>
+                    <Text style={[styles.Notification, { color: colors.text,fontFamily: "Vazirmatn-SemiBold" }]}>{i18n.t("MessageNotification")}</Text>
+                    <TextInput style={[styles.Input, { color: colors.text, borderColor: colors.mirza,fontFamily: "Vazirmatn-SemiBold" }]} blurOnSubmit placeholderTextColor={colors.mirza} placeholder='Message...' onChangeText={setValue} />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginTop: 20 }}>
                         <View style={{ width: '42%' }}>
                             <Button title={i18n.t("Send")} onPress={() => handlePress(notificationSend)} />
@@ -87,14 +87,11 @@ const styles = StyleSheet.create({
     },
     Available: {
         fontSize: 22,
-        fontWeight: '700',
     },
     Notification: {
         fontSize: 18,
-        fontWeight: '500'
     },
     Input: {
-        fontWeight: '500',
         letterSpacing: 1.5,
         marginTop: 50,
         fontSize: 18,

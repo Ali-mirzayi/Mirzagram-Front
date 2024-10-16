@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mirzagram",
     "slug": "my-app",
-    "version": "1.5.6",
+    "version": "1.5.8",
     "orientation": "portrait",
     "icon": "./assets/mirza256clean.png",
     "userInterfaceStyle": "automatic",
@@ -18,7 +18,9 @@
       "supportsTablet": true,
       "userInterfaceStyle": "automatic",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -33,7 +35,7 @@
       "googleServicesFile": "./google-services.json",
       "package": "com.services.mirzagram",
       "userInterfaceStyle": "automatic",
-      "versionCode": "3"
+      "versionCode": 5
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -55,6 +57,12 @@
         "expo-document-picker",
         {
           "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/Vazirmatn-Black.ttf","./assets/fonts/Vazirmatn-Bold.ttf","./assets/fonts/Vazirmatn-Light.ttf","./assets/fonts/Vazirmatn-Medium.ttf","./assets/fonts/Vazirmatn-Regular.ttf","./assets/fonts/Vazirmatn-SemiBold.ttf","./assets/fonts/Vazirmatn-Thin.ttf"]
         }
       ],
       "expo-asset"

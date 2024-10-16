@@ -6,19 +6,19 @@ import useTheme from '../utils/theme';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslate } from '../language/useTranslate';
 
-export default function LoginPrev({}: StackScreenProps<LoginNavigationProps, 'LoginPrev'>) {
-	const { colors } = useTheme();
-    const {navigate}:any = useNavigation();
-    const { i18n,locale } = useTranslate();
+export default function LoginPrev({ }: StackScreenProps<LoginNavigationProps, 'LoginPrev'>) {
+    const { colors } = useTheme();
+    const { navigate }: any = useNavigation();
+    const { i18n, locale } = useTranslate();
 
     return (
-        <View style={[styles.Container,{backgroundColor:colors.background}]}>
+        <View style={[styles.Container, { backgroundColor: colors.background }]}>
             <LottieView autoPlay source={require('../assets/security.json')} style={styles.ImageContainer} />
-            <Text style={[styles.Mirza,{color:colors.mirza,fontSize:locale==='en'?25:30}]}>{i18n.t("MirzaGram")}</Text>
-            <Text style={[styles.MirzaDesc,{color:colors.text,fontSize: locale==='en'?17:19}]}>{i18n.t("Chatsafely")}</Text>
-            <Text style={[styles.MirzaDesc,{color:colors.text,fontSize: locale==='en'?17:19}]}>{i18n.t("ProtectPrivacy")}</Text>
+            <Text style={[styles.Mirza, { color: colors.mirza, fontSize: 27, fontFamily: "Vazirmatn-Bold" }]}>{i18n.t("MirzaGram")}</Text>
+            <Text style={[styles.MirzaDesc, { color: colors.text, fontSize: 17, fontFamily: "Vazirmatn-Regular" }]}>{i18n.t("Chatsafely")}</Text>
+            <Text style={[styles.MirzaDesc, { color: colors.text, fontSize: 17, fontFamily: "Vazirmatn-Regular" }]}>{i18n.t("ProtectPrivacy")}</Text>
             <TouchableHighlight style={styles.ButtonContainer} onPress={() => navigate('Login')} underlayColor={"#c8cce0"}>
-                <Text testID='LoginPrevScreen' style={[styles.Button,{fontSize: locale==='en'?22:28}]}>{i18n.t("roll")}</Text>
+                <Text testID='LoginPrevScreen' style={[styles.Button, { fontSize: 23, fontFamily: "Vazirmatn-Bold",marginTop: locale === 'en' ? 2 : -3 }]}>{i18n.t("roll")}</Text>
             </TouchableHighlight>
         </View>
     )
@@ -35,7 +35,6 @@ const styles = StyleSheet.create({
         height: 250,
     },
     Mirza: {
-        fontWeight: "700",
         marginTop: 20,
         marginBottom: 7,
     },
@@ -49,14 +48,12 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         overflow: "hidden",
         width: "80%",
+        paddingVertical:7
     },
     Button: {
         color: "white",
         paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 13,
         backgroundColor: 'transparent',
-        fontWeight: '500',
-        textAlign: "center"
+        textAlign: "center",
     }
 });

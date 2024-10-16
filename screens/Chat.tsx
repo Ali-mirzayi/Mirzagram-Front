@@ -88,26 +88,15 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 		});
 	};
 
-	const handleCreateRoomResponse = async ({ newRoom, contact }: { newRoom: Room, contact: User }) => {
-		setPending(false);
-		const roomIfExists = rooms.find(e => e.id === newRoom.id);
-		if (roomIfExists !== undefined) return;
-		await insertRoom(newRoom);
+	const handleFindRoomResponse = async ({ newRoom, contact }: { newRoom: Room | null, contact: User }) => {
+		const roomIfExists = rooms.find(e => e.id === newRoom?.id);
+		if (roomIfExists || !newRoom?.id) return;
 		setRooms(e => [...e, newRoom]);
+		await insertRoom(newRoom);
 		setCurrentRoomId(newRoom.id);
 		navigation.navigate("Messaging", { contact: contact, roomId: newRoom.id });
-	}
-
-	const handleFindRoomResponse = async (res: { result: Room | null, contact: User }) => {
-		const { result, contact } = res;
-		if (result?.id) {
-			await insertRoom(result);
-			setRooms(e => [...e, result]);
-			setCurrentRoomId(result.id);
-			navigation.navigate("Messaging", { contact, roomId: result.id });
-			setPending(false);
-		}
-	}
+		setPending(false);
+	};
 
 	useEffect(() => {
 		getAllRooms().then((result: Room[] | any) => {
@@ -117,6 +106,10 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 				user['token'] = expoPushToken
 				setUser(user);
 				storage.set('user', JSON.stringify({ name: user.name, _id: user._id, avatar: '', token: expoPushToken }));
+			};
+
+			if (result.length > 0) {
+				setRooms(freshRooms);
 			};
 
 			const cleanRoom = freshRooms.map(room => ({
@@ -136,10 +129,6 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 			} catch (err) {
 				console.log(`error in updateUser ${err}`);
 			}
-
-			if (result.length > 0) {
-				setRooms(freshRooms);
-			}
 		}).catch(() => Toast.show({
 			type: 'error',
 			text1: 'some thing went wrong with db',
@@ -149,18 +138,29 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 
 	useEffect(() => {
 		if (!socket || !user) return;
+
+		socket.on("connected", () => {
+			getAllRooms().then((result: Room[] | any) => {
+				const freshRooms: Room[] = result.map((e: any) => JSON.parse(e.data));
+				const cleanRoom = freshRooms.map(room => ({
+					...room,
+					messages: []
+				}));
+				socket.emit('setUserConnected', { userId: user._id, cleanRoom });
+			})
+		});
+
 		socket.on('chatNewMessage', async (data: IMessagePro & { roomId: string }) => {
 			const { roomId, ...newMessage } = data;
+			const contact = newMessage.user;
 			if (!rooms.find(room => room.id === roomId)) {
 				//@ts-ignore
-				const newRoom: Room = { id: roomId, users: [user, newMessage.user], messages: [] };
+				const newRoom: Room = { id: roomId, users: [user, contact], messages: [] };
 				setRooms(prevRooms => {
 					if (prevRooms.find(room => room.id === roomId)) {
-						console.log('update2');
 						handleCountNewMessages({ roomId, erase: false });
 						return prevRooms;
 					};
-					console.log('update3');
 					handleCountNewMessages({ roomId, erase: false });
 					insertRoom(newRoom);
 					return [...prevRooms, newRoom];
@@ -226,17 +226,15 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 			};
 			const roomMessage: Room[] = selectedRoom.map((e) => JSON.parse(e.data))[0]?.messages;
 			const newRoomMessage = [newMessage, ...roomMessage];
-			const contact = newMessage.user;
-			socket.emit("recivedMessage", { messageId: newMessage._id, roomId, contact, contactId: contact._id });
+			socket.emit("recivedMessage", { messageId: newMessage._id, roomId, contact: user, userId: contact._id });
 			//@ts-ignore
 			await updateMessage({ id: roomId, users: [user, contact], messages: newRoomMessage });
 			if ((isFocused || currentRoomId !== roomId) && rooms.find(room => room.id === roomId)) {
-				console.log('update');
 				handleCountNewMessages({ roomId, erase: false });
 			};
 		});
 
-		socket.on("recivedMessage", async ({ messageId, contact, roomId }) => {
+		socket.on("recivedMessageResponse", async ({ messageId, contact, roomId }) => {
 			try {
 				const result = await getRoom(roomId);
 				if (result.length > 0) {
@@ -259,19 +257,13 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 		});
 
 		if (!isFocused) return;
-		socket.on("connected", () => {
-			socket.emit('setSocketIdAndjoin', user._id);
-		});
-
-		socket.on("createRoomResponse", handleCreateRoomResponse);
-		socket.on("findRoomResponse", handleFindRoomResponse);
+		socket.on("createRoomResponse", handleFindRoomResponse);
 
 		return () => {
 			socket.off('chatNewMessage');
 			socket.off('connected');
-			socket.off('recivedMessage');
-			socket.off("findRoomResponse", handleFindRoomResponse);
-			socket.off('createRoomResponse', handleCreateRoomResponse);
+			socket.off('recivedMessageResponse');
+			socket.off("createRoomResponse", handleFindRoomResponse);
 		};
 	}, [socket, isFocused]);
 
@@ -292,7 +284,7 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 
 	const notifData = notification?.request.content.data;
 
-	useLayoutEffect(() => {
+	useEffect(() => {
 		if (notifData) {
 			setCurrentRoomId(notifData?.roomId);
 			navigation.navigate('Messaging', {
@@ -321,7 +313,7 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 								<TouchableHighlight style={styles.mr10} underlayColor={"#e3e5ef"} onPress={() => setOpen(true)} >
 									<Ionicons name="menu-sharp" style={styles.menu} color={colors.text} size={25} />
 								</TouchableHighlight>
-								<Text testID="ChatScreen" style={[styles.chatheading, { color: colors.mirza, fontSize: locale === 'en' ? 22 : 27 }]}>{i18n.t("MirzaGram")}</Text>
+								<Text testID="ChatScreen" style={{ color: colors.mirza, fontSize: 23, fontFamily: "Vazirmatn-Bold", marginBottom: locale === 'en' ? -5 : 0 }}>{i18n.t("MirzaGram")}</Text>
 							</View>
 							<SearchBar setUsers={setUsers} setScreen={setScreen} />
 						</View>
@@ -329,27 +321,27 @@ const Chat = ({ navigation }: DrawerScreenProps<ChatNavigationProps, 'Chat'>) =>
 					{isPlayerOpen ? <FloatingMusicPlayer /> : null}
 					<View style={styles.chatlistContainer}>
 						{screen === "users" && users.length > 0 ?
-								<FlatList
-									renderItem={({ item }) => <ChatComponent contact={item} lastMessage={lastMessage.find(e => e.roomId === contactMap[item._id]?.[0])?.message} countNewMessage={countNewMessages.find(e => e.id === contactMap[item._id]?.[0])} messages={{ text: "Tap to start chatting" }} handleNavigation={() => pressUserHandler({ contact: item })} />}
-									data={users}
-									keyExtractor={(item) => item._id}
-									extraData={lastMessage}
-								/>
-							 : <View />
+							<FlatList
+								renderItem={({ item }) => <ChatComponent contact={item} lastMessage={lastMessage.find(e => e.roomId === contactMap[item._id]?.[0])?.message} countNewMessage={countNewMessages.find(e => e.id === contactMap[item._id]?.[0])} messages={{ text: "Tap to start chatting" }} handleNavigation={() => pressUserHandler({ contact: item })} />}
+								data={users}
+								keyExtractor={(item) => item._id}
+								extraData={lastMessage}
+							/>
+							: <View />
 						}
 						{
 							screen === "rooms" && rooms.length > 0 ? (
-									<FlatList
-										renderItem={({ item }) => <ChatComponent lastMessage={lastMessage.find(e => e.roomId === item.id)?.message} messages={item.messages[0]} countNewMessage={countNewMessages.find(e => e.id === item.id)} contact={item.users[0].name == user?.name ? item.users[1] : item.users[0]} handleNavigation={() => pressrRoomHandler({ contact: item.users[0].name === user?.name ? item.users[1] : item.users[0], roomId: item.id })} />}
-										data={rooms}
-										keyExtractor={(item) => item.id}
-										extraData={lastMessage}
-										scrollEnabled
-									/>
+								<FlatList
+									renderItem={({ item }) => <ChatComponent lastMessage={lastMessage.find(e => e.roomId === item.id)?.message} messages={item.messages[0]} countNewMessage={countNewMessages.find(e => e.id === item.id)} contact={item.users[0]._id === user?._id ? item.users[1] : item.users[0]} handleNavigation={() => pressrRoomHandler({ contact: item.users[0].name === user?.name ? item.users[1] : item.users[0], roomId: item.id })} />}
+									data={rooms}
+									keyExtractor={(item) => item.id}
+									extraData={lastMessage}
+									scrollEnabled
+								/>
 							) : screen === "rooms" && rooms.length === 0 ? (
 								<View style={[styles.chatemptyContainer]}>
-									<Text style={[styles.chatemptyText, { color: colors.text }]}>{i18n.t("NoRooms")}</Text>
-									<Text style={{ color: colors.text, fontSize: locale === 'fa' ? 17 : 16 }}>{i18n.t("SearchToconnection")}</Text>
+									<Text style={[styles.chatemptyText, { color: colors.text, fontFamily: "Vazirmatn-Bold" }]}>{i18n.t("NoRooms")}</Text>
+									<Text style={{ color: colors.text, fontSize: 16, fontFamily: "Vazirmatn-Light" }}>{i18n.t("SearchToconnection")}</Text>
 								</View>
 							) : <View />
 						}
@@ -378,9 +370,6 @@ const styles = StyleSheet.create({
 		marginBottom: 10,
 		elevation: 4,
 	},
-	chatheading: {
-		fontWeight: "bold",
-	},
 	chatheader: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -398,17 +387,17 @@ const styles = StyleSheet.create({
 	chatlistContainer: {
 		paddingTop: 10,
 		paddingHorizontal: 10,
-		flex:1
+		flex: 1
 	},
 	chatemptyContainer: {
 		width: "100%",
-		// height: "80%",
 		alignItems: "center",
 		justifyContent: "center",
-		flex:1
+		flex: 1
 	},
 	chatemptyText: {
-		fontWeight: "bold", fontSize: 24, paddingBottom: 30
+		fontSize: 24,
+		paddingBottom: 10
 	},
 	drawerContainer: {
 		flex: 1,
@@ -416,7 +405,6 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		position: "relative",
 		height: 500,
-		// width: 400
 	},
 	paragraph: {
 		padding: 16,

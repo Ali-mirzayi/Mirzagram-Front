@@ -51,10 +51,19 @@ export default function SearchBar({ setUsers, setScreen }: props) {
     }, [debouncedInputValue]);
 
     useEffect(() => {
-        if (isFocused) return;
-        setSearch(undefined);
-        setUsers([]);
-        setScreen("rooms");
+        if (!isFocused) {
+            setSearch(undefined);
+            setUsers([]);
+            setScreen("rooms");
+        }
+        // if (isFocused) {
+        //     // if (!user) return;
+        //     // socket?.emit("setSocketIdAndjoin", user?._id);
+        // } else {
+        //     setSearch(undefined);
+        //     setUsers([]);
+        //     setScreen("rooms");
+        // }
     }, [isFocused]);
 
     return (
@@ -98,6 +107,7 @@ const styles = StyleSheet.create({
         width: "70%",
         right: 50,
         paddingLeft: 8,
-        textAlign: 'left'
+        textAlign: 'left',
+        fontFamily: "Vazirmatn-SemiBold"
     }
 })

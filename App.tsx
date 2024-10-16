@@ -6,7 +6,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { EventProvider } from 'react-native-outside-press';
 import Toast, { ErrorToast } from 'react-native-toast-message';
 import TrackPlayer, { AppKilledPlaybackBehavior, Capability } from 'react-native-track-player';
-import io from 'socket.io-client';
 import LoadingPage from "./components/LoadingPage";
 import useCheckConnection from "./hooks/useCheckConnection";
 import Navigation from "./Navigation";
@@ -112,8 +111,8 @@ function Main() {
     require('./assets/mirza64.png'),
     require('./assets/mirza96.png'),
     require('./assets/mirza128.png'),
-    require('./assets/mirza256.png')]
-  );
+    require('./assets/mirza256.png')
+  ]);
 
   if (!assets) {
     return <LoadingPage active={true} />

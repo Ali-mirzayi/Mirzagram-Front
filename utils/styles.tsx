@@ -37,7 +37,6 @@ export const styles = StyleSheet.create({
     loginbuttonText: {
         textAlign: "center",
         color: "#fff",
-        fontWeight: "600",
     },
     chatscreen: {
         backgroundColor: "#F7F7F7",
@@ -47,7 +46,6 @@ export const styles = StyleSheet.create({
     },
     chatheading: {
         fontSize: 24,
-        fontWeight: "bold",
         color: "green",
     },
     chattopContainer: {
@@ -73,7 +71,7 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    chatemptyText: { fontWeight: "bold", fontSize: 24, paddingBottom: 30 },
+    chatemptyText: { fontSize: 24, paddingBottom: 30 },
     messagingscreen: {
         flex: 1,
     },
@@ -136,7 +134,6 @@ export const styles = StyleSheet.create({
     },
     modalsubheading: {
         fontSize: 20,
-        fontWeight: "bold",
         marginBottom: 15,
         textAlign: "center",
     },
@@ -171,7 +168,6 @@ export const styles = StyleSheet.create({
     cusername: {
         fontSize: 18,
         marginBottom: 5,
-        fontWeight: "bold",
     },
     cmessage: {
         fontSize: 14,

@@ -1,5 +1,6 @@
 import { IMessage } from "react-native-gifted-chat";
 import * as Notifications from "expo-notifications";
+import * as FileSystem from 'expo-file-system';
 
 export enum availableStatus {
     "available" = 0,
@@ -7,6 +8,7 @@ export enum availableStatus {
     "download" = 2,
     "uploading" = 3,
     "error" = 4,
+    "cancel" = 5,
 };
 
 export type LoginNavigationProps = {
@@ -127,4 +129,6 @@ export enum remotePlayBackEnum {
     "seekto" = 4,
 }
 
-export type transferredProgress = {id?: string | number,transferred?:string,size?:string}[] | [];
+export type transferredProgress = { id?: string | number, transferred?: string, size?: string }[] | [];
+
+export type currentTask = { task: FileSystem.DownloadResumable | FileSystem.UploadTask, id: string | number }[] | [];

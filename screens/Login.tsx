@@ -36,7 +36,6 @@ const Login = ({ route, navigation }: StackScreenProps<LoginNavigationProps, 'Lo
 				storage.set('user', JSON.stringify({ name: username, _id, avatar: '', token: expoPushToken }));
 				setUser({ _id: _id, name: username, avatar: '', token: expoPushToken });
 				socket?.emit('setSocketId', _id, navigation.navigate('Chat', { beCheck }));
-				// socket?.emit('setSocketId', { 'socketId': socket.id, 'userId': _id, 'userRoomId': undefined },navigation.navigate('Chat', { beCheck }));
 			} else {
 				Alert.alert("Error! invalid username");
 			}
@@ -56,19 +55,19 @@ const Login = ({ route, navigation }: StackScreenProps<LoginNavigationProps, 'Lo
 	return (
 		<SafeAreaView style={[styles.loginscreen, { backgroundColor: colors.background, }]}>
 			<LottieView autoPlay source={require('../assets/chat.json')} style={styles.ImageContainer} />
-			<Text style={[styles.Mirza, { color: colors.loginMirza, fontSize: locale === 'en' ? 22 : 27 }]}>{i18n.t("SignIn")}</Text>
-			<Text style={[styles.MirzaDesc, { color: colors.text, fontSize: locale === 'en' ? 15 : 18 }]}>{i18n.t("EnterUsername")}</Text>
+			<Text style={[styles.Mirza, { color: colors.loginMirza, fontSize: 28, fontFamily: "Vazirmatn-Bold" }]}>{i18n.t("SignIn")}</Text>
+			<Text style={[styles.MirzaDesc, { color: colors.text, fontSize: 18, fontFamily: "Vazirmatn-Regular" }]}>{i18n.t("EnterUsername")}</Text>
 			<View style={styles.logininputContainer}>
 				<TextInput
-					placeholderTextColor={colors.text}
+					placeholderTextColor={colors.lightText}
 					autoCorrect={false}
 					placeholder={i18n.t("Username")}
-					style={[styles.logininput, { color: colors.text, borderColor: colors.boarder }]}
+					style={[styles.logininput, { color: colors.text, borderColor: colors.boarder, fontFamily: "Vazirmatn-Medium", textAlign: locale === 'en' ? 'left' : 'right' }]}
 					value={username}
 					onChangeText={setUsername} />
 			</View>
 			<TouchableHighlight style={styles.ButtonContainer} onPress={handleSignIn} underlayColor={"#c8cce0"}>
-				<Text testID="LoginScreen" style={styles.Button}>{i18n.t("LetChat")}</Text>
+				<Text testID="LoginScreen" style={[styles.Button,{marginTop: locale === 'en' ? 2 : -3}]}>{i18n.t("LetChat")}</Text>
 			</TouchableHighlight>
 		</SafeAreaView>
 	);
@@ -95,9 +94,7 @@ const styles = StyleSheet.create({
 		height: 250,
 	},
 	Mirza: {
-		fontWeight: "700",
 		marginTop: 20,
-		marginBottom: 7,
 	},
 	MirzaDesc: {
 		textAlign: "center",
@@ -114,9 +111,8 @@ const styles = StyleSheet.create({
 		width: "80%",
 		paddingVertical: 7,
 		paddingHorizontal: 12,
-		fontSize: 18,
+		fontSize: 21,
 		borderRadius: 4,
-		textAlign: 'left'
 	},
 	ButtonContainer: {
 		marginTop: 20,
@@ -124,14 +120,14 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		overflow: "hidden",
 		width: "80%",
+		paddingVertical:7
 	},
 	Button: {
 		color: "white",
 		textAlign: "center",
 		paddingHorizontal: 20,
-		paddingTop: 10,
-		paddingBottom: 13,
 		backgroundColor: 'transparent',
-		fontSize: 20
+		fontSize: 23,
+		fontFamily: "Vazirmatn-SemiBold"
 	}
 });

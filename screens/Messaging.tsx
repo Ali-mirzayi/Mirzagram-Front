@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { GiftedChat, IMessage } from 'react-native-gifted-chat'
 import { StackScreenProps } from "@react-navigation/stack";
 import { IMessagePro, RecordingEnum, RootStackParamList } from '../utils/types';
-import { useCurrentContact, useIsOpen, useMessage, useSetLastMessage, useSocket, useTransferredProgress, useUser } from '../socketContext';
+import { useCurrentContact, useCurrentTask, useIsOpen, useMessage, useSetCancellationId, useSetLastMessage, useSocket, useTransferredProgress, useUser } from '../socketContext';
 import { updateMessage, getRoom } from '../utils/DB';
 import LoadingPage from '../components/LoadingPage';
 import { renderActions, renderBubble, RenderChatFooter, renderInputToolbar, renderMessageAudio, renderMessageFile, RenderMessageImage, renderMessageVideo, renderSend, renderTime } from '../components/Message';
@@ -16,6 +16,7 @@ import { cancelRecording, startRecording, stopRecording } from '../components/Se
 import useAudioPlayer from '../hooks/useAudioPlayer';
 import { Gesture } from 'react-native-gesture-handler';
 import useSendMedia from '../hooks/useSendMedia';
+import { useHandleCancellation } from '../hooks/useHandleCancellation';
 
 const Messaging = ({ route }: StackScreenProps<RootStackParamList, 'Messaging'>) => {
 	const { contact, roomId }: any = route.params;
@@ -34,7 +35,6 @@ const Messaging = ({ route }: StackScreenProps<RootStackParamList, 'Messaging'>)
 	const { open: isPlayerOpen } = useIsOpen();
 	const setContact = useCurrentContact(state => state.setContact);
 	const { startPlayingByItem, stopPlaying } = useAudioPlayer();
-
 	const translateY = useSharedValue(1000);
 	const { colors } = useTheme();
 	const videoRef: any = useRef(null);
@@ -42,7 +42,12 @@ const Messaging = ({ route }: StackScreenProps<RootStackParamList, 'Messaging'>)
 	const offset = useSharedValue<number>(0);
 	const pressed = useSharedValue<boolean>(false);
 	const { SendImage, SendVideo, SendFile, SendAudio, ReSendImage, ReSendVideo, ReSendMusic, ReSendAudio, ReSendFile } = useSendMedia({ roomId });
-	const {progress,setProgress,setProgressThrottled} = useTransferredProgress();
+	const { progress, setProgress, setProgressThrottled } = useTransferredProgress();
+	const setCancellationId = useSetCancellationId(state => state.setCancellationId);
+	const setTasks = useCurrentTask(state => state.setTasks);
+
+	useHandleCancellation();
+
 	const handleAudioPermissions = async () => {
 		try {
 			if (permissionResponse?.status !== 'granted') {
@@ -184,10 +189,10 @@ const Messaging = ({ route }: StackScreenProps<RootStackParamList, 'Messaging'>)
 			<View style={{ flexDirection: 'row', padding: 15, alignItems: "center", backgroundColor: colors.undetlay }}>
 				<View style={{ width: 47, height: 47, borderRadius: 25, backgroundColor: colors.border, marginRight: 10 }} />
 				<View style={{ alignItems: "flex-start", flexDirection: "column" }}>
-					<Text style={{ color: colors.text, fontSize: 23, fontWeight: "700" }}>{contact ? contact.name : ''}</Text>
+					<Text style={{ color: colors.text, fontSize: 23, fontFamily: "Vazirmatn-Black" }}>{contact ? contact.name : ''}</Text>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-						<Text style={{ color: colors.text, fontSize: 17, fontWeight: "600", paddingBottom: 2 }}>{status === true ? "online" : status === false ? "offline" : "connecting..."}</Text>
-						<Text style={{ color: colors.text, fontSize: 14, fontWeight: "500" }}>{isInRoom === false && status === true ? "but not in room" : ""}</Text>
+						<Text style={{ color: colors.text, fontSize: 17, paddingBottom: 2, fontFamily: "Vazirmatn-Bold" }}>{status === true ? "online" : status === false ? "offline" : "connecting..."}</Text>
+						<Text style={{ color: colors.text, fontSize: 14, fontFamily: "Vazirmatn-Bold" }}>{isInRoom === false && status === true ? "but not in room" : ""}</Text>
 					</View>
 				</View>
 			</View>
@@ -198,10 +203,10 @@ const Messaging = ({ route }: StackScreenProps<RootStackParamList, 'Messaging'>)
 				messages={messages}
 				onSend={messages => onSend(messages)}
 				user={user}
-				renderMessageImage={(e: any) => RenderMessageImage(e, { setMessages, colors, ReSendImage,progress,setProgressThrottled,setProgress })}
-				renderMessageVideo={(e: any) => renderMessageVideo(e, { setMessages, colors, videoRef, ReSendVideo, progress,setProgressThrottled,setProgress })}
-				renderMessageAudio={(e: any) => renderMessageAudio(e, { setMessages, colors, startPlayingByItem, stopPlaying, ReSendMusic, ReSendAudio,progress,setProgressThrottled,setProgress })}
-				renderCustomView={(e: any) => renderMessageFile(e, { setMessages, colors, ReSendFile,progress,setProgressThrottled,setProgress })}
+				renderMessageImage={(e: any) => RenderMessageImage(e, { setMessages, colors, ReSendImage, progress, setProgressThrottled, setProgress, setCancellationId, setTasks })}
+				renderMessageVideo={(e: any) => renderMessageVideo(e, { setMessages, colors, videoRef, ReSendVideo, progress, setProgressThrottled, setProgress, setCancellationId, setTasks })}
+				renderMessageAudio={(e: any) => renderMessageAudio(e, { setMessages, colors, startPlayingByItem, stopPlaying, ReSendMusic, ReSendAudio, progress, setProgressThrottled, setProgress, setCancellationId, setTasks })}
+				renderCustomView={(e: any) => renderMessageFile(e, { setMessages, colors, ReSendFile, progress, setProgressThrottled, setProgress, setCancellationId, setTasks })}
 				alwaysShowSend
 				scrollToBottom
 				loadEarlier
@@ -210,7 +215,7 @@ const Messaging = ({ route }: StackScreenProps<RootStackParamList, 'Messaging'>)
 				renderActions={(e) => renderActions(e, { setOpen, open, colors })}
 				renderBubble={(e) => renderBubble(e, { colors })}
 				renderSend={(e) => renderSend(e, { colors })}
-				renderChatFooter={() => RenderChatFooter({ user, socket, translateY, roomId, setMessages, colors, recording, setRecording, pan, animatedStyles, SendImage, SendVideo, SendFile })}
+				renderChatFooter={() => RenderChatFooter({ translateY, colors, recording, setRecording, pan, animatedStyles, SendImage, SendVideo, SendFile })}
 				renderInputToolbar={(e) => renderInputToolbar(e, { colors })}
 				renderTime={(e) => renderTime(e, { colors })}
 				optionTintColor='#fff'

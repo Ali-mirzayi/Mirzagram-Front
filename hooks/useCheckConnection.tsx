@@ -11,7 +11,8 @@ export default function useCheckConnection(setError: React.Dispatch<React.SetSta
 
     useEffect(() => {
         const newSocket = io(baseURL(), {
-            auth: {token: process.env.EXPO_PUBLIC_SOCKET_PASS}
+            auth: {token: 'zQS5wPm16P9n'}
+            // auth: {token: process.env.EXPO_PUBLIC_SOCKET_PASS}
         });
         setSocket(newSocket);
         const checkConnection = () => {

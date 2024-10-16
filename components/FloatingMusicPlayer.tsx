@@ -104,7 +104,7 @@ const FloatingMusicPlayer = () => {
                     <MovingText animationThreshold={35} style={{ color: colors.text, size: 10, paddingLeft: 0, marginRight: 0, paddingRight: 0 }} disable={!player?.playing && Number(lastTrack?.name?.length) >= 50}>{lastTrack.name ?? ""}</MovingText>
                 </View>
                 <View style={styles.close}>
-                    <Text style={{ color: colors.text }}>{currentPositionTime}</Text>
+                    <Text style={{ color: colors.text, fontFamily: "Vazirmatn-SemiBold" }}>{currentPositionTime}</Text>
                     <Ionicons onPress={handleClose} name='close-circle' size={28} color={colors.red} />
                 </View>
             </View>

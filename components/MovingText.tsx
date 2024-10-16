@@ -36,7 +36,7 @@ const MovingText = ({ children: text, animationThreshold, style, disable }: Movi
                 animatedStyle,
                 shouldAnimate && { width: 9999, paddingLeft: 16, margin: 0 },
                 style,
-                {paddingLeft:0}
+                {paddingLeft:0,fontFamily: "Vazirmatn-SemiBold"}
             ]}
         >
             {text}

@@ -27,7 +27,6 @@ export default function DrawerCore({ children, open, setOpen, darkMode, setDarkM
     const { i18n, setLocale, locale } = useTranslate();
     const screenDimensions = Dimensions.get('window');
 
-
     const DrawerComponent = () => {
         async function onPressHandler() {
             setDarkMode(e => !e);
@@ -65,55 +64,54 @@ export default function DrawerCore({ children, open, setOpen, darkMode, setDarkM
 
         return (
             <ScrollView style={{ flex: 1, backgroundColor: colors.red }}>
-            <View style={{ flex: 1,height:screenDimensions.height, backgroundColor: colors.background }}>
-                <Text style={[styles.chatheading, styles.user, { color: colors.mirza }]}>{user?.name}</Text>
-                <Pressable onPress={onPressHandler} style={{ zIndex: 9999, margin: 10 }} >
-                    <AnimatedLottieView
-                        progress={toggleRef}
-                        source={require('../assets/toggle2.json')}
-                        style={styles.darkMode}
-                    />
-                </Pressable>
-                <View style={styles.navigation}>
-                    <Link url={'https://www.linkedin.com/in/alimirzaeizade/'}>
-                        <View style={styles.indIcon}>
-                            <Ionicons name="logo-linkedin" size={36} color="#317daf" />
-                            <Text style={{ color: colors.text, fontSize: 18 }}>Linkedin</Text>
-                        </View>
-                    </Link>
-                    <Link url={"https://github.com/Ali-mirzayi"}>
-                        <View style={styles.indIcon}>
-                            <Ionicons name="logo-github" size={38} color="black" />
-                            <Text style={{ color: colors.text, fontSize: 18 }}>GitHub</Text>
-                        </View>
-                    </Link>
-                    <Link url={"https://alimirzaei.vercel.app"}>
-                        <View style={styles.indIcon}>
-                            <MaterialCommunityIcons name="web" size={40} color="black" />
-                            <Text style={{ color: colors.text, fontSize: 18 }}>Web Site</Text>
-                        </View>
-                    </Link>
-                </View>
-
-                <TouchableHighlight style={[styles.ButtonContainer, { width: locale === 'fa' ? '60%' : '70%' }]} onPress={() => setLocale(e => e === 'en' ? 'fa' : 'en')}>
-                    <Text style={[styles.Button, { fontSize: locale === 'fa' ? 22 : 17 }]}>{i18n.t("switchLang")}</Text>
-                </TouchableHighlight>
-                <TouchableHighlight onPress={openApp} style={[styles.ButtonContainer, { width: locale === 'fa' ? '60%' : '70%' }]}>
-                        <Text style={[styles.Button, { fontSize: locale === 'fa' ? 22 : 17 }]}>{i18n.t("OpenMyket")}</Text>
-                </TouchableHighlight>
-                <TouchableHighlight underlayColor={colors.undetlay} onPress={onValueChange} style={{ backgroundColor: isChecked ? '#3e6b64' : 'transparent', marginTop: 30 }}>
-                    <View style={{ alignItems: 'center', flexDirection: locale === 'en' ? 'row' : 'row-reverse', padding: 10, gap: 5 }}>
-                        <Text style={{ color: isChecked ? '#fff' : colors.text }}>{i18n.t("RemoveData")}</Text>
-                        <Checkbox
-                            value={isChecked}
-                            color={isChecked ? '#4630EB' : undefined}
-                            onValueChange={onValueChange}
-                            style={styles.removeCheck}
+                <View style={{ flex: 1, height: screenDimensions.height, backgroundColor: colors.background }}>
+                    <Text style={[styles.user, { color: colors.mirza,fontSize:30, fontFamily: "Vazirmatn-Bold" }]}>{user?.name}</Text>
+                    <Pressable onPress={onPressHandler} style={{ zIndex: 9999, margin: 10 }} >
+                        <AnimatedLottieView
+                            progress={toggleRef}
+                            source={require('../assets/toggle2.json')}
+                            style={styles.darkMode}
                         />
+                    </Pressable>
+                    <View style={styles.navigation}>
+                        <Link url={'https://www.linkedin.com/in/alimirzaeizade/'}>
+                            <View style={styles.indIcon}>
+                                <Ionicons name="logo-linkedin" size={36} color="#317daf" />
+                                <Text style={{ color: colors.text, fontSize: 18, fontFamily: "Vazirmatn-SemiBold" }}>Linkedin</Text>
+                            </View>
+                        </Link>
+                        <Link url={"https://github.com/Ali-mirzayi"}>
+                            <View style={styles.indIcon}>
+                                <Ionicons name="logo-github" size={38} color="black" />
+                                <Text style={{ color: colors.text, fontSize: 18, fontFamily: "Vazirmatn-SemiBold" }}>GitHub</Text>
+                            </View>
+                        </Link>
+                        <Link url={"https://alimirzaei.vercel.app"}>
+                            <View style={styles.indIcon}>
+                                <MaterialCommunityIcons name="web" size={40} color="black" />
+                                <Text style={{ color: colors.text, fontSize: 18, fontFamily: "Vazirmatn-SemiBold" }}>Web Site</Text>
+                            </View>
+                        </Link>
                     </View>
-                </TouchableHighlight>
-            </View>
-             </ScrollView>
+                    <TouchableHighlight style={[styles.ButtonContainer, { width: locale === 'fa' ? '60%' : '70%' }]} onPress={() => setLocale(e => e === 'en' ? 'fa' : 'en')}>
+                        <Text style={[styles.Button, { fontSize: 17, fontFamily: "Vazirmatn-SemiBold" }]}>{i18n.t("switchLang")}</Text>
+                    </TouchableHighlight>
+                    <TouchableHighlight onPress={openApp} style={[styles.ButtonContainer, { width: locale === 'fa' ? '60%' : '70%' }]}>
+                        <Text style={[styles.Button, { fontSize: 17, fontFamily: "Vazirmatn-SemiBold" }]}>{i18n.t("OpenMyket")}</Text>
+                    </TouchableHighlight>
+                    <TouchableHighlight underlayColor={colors.undetlay} onPress={onValueChange} style={{ backgroundColor: isChecked ? '#3e6b64' : 'transparent', marginTop: 30,paddingVertical:10 }}>
+                        <View style={{ alignItems: 'center', flexDirection: locale === 'en' ? 'row' : 'row-reverse', marginHorizontal: 'auto', gap: 5 }}>
+                            <Text style={{ color: isChecked ? '#fff' : colors.text, fontFamily: "Vazirmatn-SemiBold" }}>{i18n.t("RemoveData")}</Text>
+                            <Checkbox
+                                value={isChecked}
+                                color={isChecked ? '#4630EB' : undefined}
+                                onValueChange={onValueChange}
+                                style={styles.removeCheck}
+                            />
+                        </View>
+                    </TouchableHighlight>
+                </View>
+            </ScrollView>
         )
     };
 
@@ -156,12 +154,11 @@ export default function DrawerCore({ children, open, setOpen, darkMode, setDarkM
 const styles = StyleSheet.create({
     chatheading: {
         fontSize: 22,
-        fontWeight: "bold",
     },
     user: {
         position: "absolute",
         left: 16,
-        top: 36
+        top: 27
     },
     darkMode: {
         width: 85,
@@ -198,7 +195,8 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         overflow: "hidden",
         width: "75%",
-        marginHorizontal: 'auto'
+        marginHorizontal: 'auto',
+        paddingTop: 3
     },
     Button: {
         color: "white",
@@ -206,7 +204,6 @@ const styles = StyleSheet.create({
         paddingTop: 7,
         paddingBottom: 9,
         backgroundColor: 'transparent',
-        fontWeight: '500',
         textAlign: "center"
     }
 });

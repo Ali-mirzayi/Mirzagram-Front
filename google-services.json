@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "598003058905",
+    "project_id": "mirzagram-2d151",
+    "storage_bucket": "mirzagram-2d151.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:598003058905:android:28c9e49f2186ba97e956c8",
+        "android_client_info": {
+          "package_name": "com.services.mirzagram"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfpVnflDPgxKjUByfS-grT_2tjzFG-rvY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

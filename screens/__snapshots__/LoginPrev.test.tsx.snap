@@ -317,7 +317,6 @@ exports[`LoginNavigation should be render correctly 1`] = `
                                 "backgroundColor": "transparent",
                                 "color": "white",
                                 "fontSize": 22,
-                                "fontWeight": "500",
                                 "paddingBottom": 13,
                                 "paddingHorizontal": 20,
                                 "paddingTop": 10,

@@ -6,24 +6,9 @@ import { formatBytes, generateID, isMusicFile } from "../utils/utils";
 import { availableStatus, IMessagePro } from "../utils/types";
 import baseURL from "../utils/baseURL";
 import { GiftedChat } from "react-native-gifted-chat";
-import { useMessage, useSocket, useTransferredProgress, useUser } from "../socketContext";
+import { useCurrentTask, useMessage, useSetCancellationId, useSocket, useTransferredProgress, useUser } from "../socketContext";
 import sleep from "../utils/wait";
-
-//@ts-ignore
-function debounce(func, delay) {
-    //@ts-ignore
-    let timeoutId;
-    //@ts-ignore
-    return function (...args) {
-        //@ts-ignore
-        const context = this;
-        //@ts-ignore
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            func.apply(context, args);
-        }, delay);
-    };
-}
+import { useEffect, useState } from "react";
 
 const wantedTags = ['artist', 'name', 'artwork'] as const;
 export type sendImageProps = {
@@ -53,6 +38,7 @@ export default function useSendMedia({ roomId }: any) {
     const user: any = useUser(state => state.user);
     const { messages, setMessages } = useMessage();
     const { setProgressThrottled, setProgress } = useTransferredProgress();
+    const setTasks = useCurrentTask(state => state.setTasks);
 
     const SendImage = async ({ uri, mimeType }: sendImageProps) => {
         if (!uri) return;
@@ -80,6 +66,7 @@ export default function useSendMedia({ roomId }: any) {
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendImage', { _id: id, text: "", createdAt: new Date(), user, roomId, mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
@@ -92,14 +79,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === id) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
                 console.log('Error uploading image: response not ok', response?.body);
             };
-            setProgress(e => e.filter(r => r.id !== id));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === id) {
@@ -108,9 +94,9 @@ export default function useSendMedia({ roomId }: any) {
                     return message;
                 }
             }));
-            setProgress(e => e.filter(r => r.id !== id));
             console.error('Error occurred during upload:', error);
         }
+        setProgress(e => e.filter(r => r.id !== id));
     };
 
     const SendVideo = async ({ uri, mimeType }: sendVideoProps) => {
@@ -139,6 +125,7 @@ export default function useSendMedia({ roomId }: any) {
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendVideo', { _id: id, text: "", createdAt: new Date(), user, roomId, mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
@@ -151,14 +138,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === id) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
-                console.log('Error uploading Image: response not ok', response?.body);
+                console.log('Error uploading Video: response not ok', response?.body);
             }
-            setProgress(e => e.filter(r => r.id !== id));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === id) {
@@ -168,13 +154,14 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== id));
-        }
+        };
+        setProgress(e => e.filter(r => r.id !== id));
     };
 
     const SendFile = async ({ uri, name, mimeType }: sendFileProps) => {
         if (!uri) return;
         const isMusic = isMusicFile(name);
+
         if (isMusic) {
             const data = await getAudioMetadata(uri, wantedTags).catch(e => console.log(e));
             let artwork = data?.metadata.artwork?.replace(/^data:image\/[^;]+;base64,/, '');
@@ -213,6 +200,7 @@ export default function useSendMedia({ roomId }: any) {
                         }
                     });
                 });
+                setTasks(state => [...state, { task: uploadTask, id }]);
                 const response = await uploadTask.uploadAsync();
                 if (response?.body === "ok") {
                     // @ts-ignore
@@ -226,14 +214,13 @@ export default function useSendMedia({ roomId }: any) {
                 } else {
                     setMessages(e => e.map(message => {
                         if (message._id === id) {
-                            return { ...message, availableStatus: availableStatus.error }
+                            return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                         } else {
                             return message;
                         }
                     }));
                     console.log('error uploading music');
                 };
-                setProgress(e => e.filter(r => r.id !== id));
             } catch (error) {
                 setMessages(e => e.map(message => {
                     if (message._id === id) {
@@ -243,12 +230,12 @@ export default function useSendMedia({ roomId }: any) {
                     }
                 }));
                 console.error('Error occurred during upload:', error);
-                setProgress(e => e.filter(r => r.id !== id));
-            }
+            };
+            setProgress(e => e.filter(r => r.id !== id));
         } else {
             setMessages((prevMessages: IMessagePro[]) => GiftedChat.append(prevMessages, [{ _id: id, text: "", createdAt: new Date(), user, file: uri, fileName: name, mimeType, availableStatus: availableStatus.uploading }]));
             try {
-                let newSize = '0'
+                let newSize = '0';
                 const uploadTask = FileSystem.createUploadTask(`${baseURL()}/upload`, uri, { uploadType: FileSystem.FileSystemUploadType.MULTIPART, httpMethod: 'POST', fieldName: 'file' }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
                     setProgressThrottled(e => {
                         const existingItem = e.find(item => item.id === id);
@@ -266,10 +253,11 @@ export default function useSendMedia({ roomId }: any) {
                             });
                         } else {
                             newSize = `${totalByte} ${format}`;
-                            return [...e, { id, size: newSize }];
+                            return [...e, { id: id, size: newSize }];
                         }
                     });
                 });
+                setTasks(state => [...state, { task: uploadTask, id }]);
                 const response = await uploadTask.uploadAsync();
                 if (response?.body === "ok") {
                     socket?.emit('sendFile', { _id: id, text: "", createdAt: new Date(), user, roomId, fileName: name, mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
@@ -282,14 +270,13 @@ export default function useSendMedia({ roomId }: any) {
                 } else {
                     setMessages(e => e.map(message => {
                         if (message._id === id) {
-                            return { ...message, availableStatus: availableStatus.error }
+                            return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                         } else {
                             return message;
                         }
                     }));
                     console.log('error uploading file');
                 };
-                setProgress(e => e.filter(r => r.id !== id));
             } catch (error) {
                 setMessages(e => e.map(message => {
                     if (message._id === id) {
@@ -299,8 +286,9 @@ export default function useSendMedia({ roomId }: any) {
                     }
                 }));
                 console.error('Error occurred during upload:', error);
-                setProgress(e => e.filter(r => r.id !== id));
-            }
+            };
+            setProgress(e => e.filter(r => r.id !== id));
+            await sleep(700);
         }
     };
 
@@ -330,6 +318,7 @@ export default function useSendMedia({ roomId }: any) {
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendAudio', { _id: id, text: "", createdAt: new Date(), user, roomId, fileName: "voice", duration, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
@@ -342,14 +331,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === id) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
                 console.log('error uploading audio');
             };
-            setProgress(e => e.filter(r => r.id !== id));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === id) {
@@ -359,8 +347,8 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== id));
         }
+        setProgress(e => e.filter(r => r.id !== id));
     };
 
     const ReSendImage = async ({ errorId }: { errorId?: string | number }) => {
@@ -394,10 +382,11 @@ export default function useSendMedia({ roomId }: any) {
                         });
                     } else {
                         newSize = `${totalByte} ${format}`;
-                        return [...e, { id:errorId, size: newSize }];
+                        return [...e, { id: errorId, size: newSize }];
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id: errorId }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendImage', { _id: errorId, text: "", createdAt: oldMessage?.createdAt, user: oldMessage?.user, roomId, mimeType: oldMessage?.mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
@@ -410,14 +399,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
                 console.log('error uploading file');
             };
-            setProgress(e => e.filter(r => r.id !== errorId));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === errorId) {
@@ -427,8 +415,8 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== errorId));
         };
+        setProgress(e => e.filter(r => r.id !== errorId));
         return;
     };
 
@@ -446,7 +434,7 @@ export default function useSendMedia({ roomId }: any) {
             const uri = oldMessage?.video;
             if (!uri) return;
             let newSize = '0'
-            const uploadTask = FileSystem.createUploadTask(`${baseURL()}/upload`, uri, { uploadType: FileSystem.FileSystemUploadType.MULTIPART, httpMethod: 'POST', fieldName: 'file', mimeType:oldMessage.mimeType, }, ({ totalBytesSent, totalBytesExpectedToSend }: any) => {
+            const uploadTask = FileSystem.createUploadTask(`${baseURL()}/upload`, uri, { uploadType: FileSystem.FileSystemUploadType.MULTIPART, httpMethod: 'POST', fieldName: 'file', mimeType: oldMessage.mimeType, }, ({ totalBytesSent, totalBytesExpectedToSend }: any) => {
                 setProgressThrottled(e => {
                     const existingItem = e.find(item => item.id === errorId);
                     const { formattedbytes: totalByte, format }: any = formatBytes({ bytes: totalBytesExpectedToSend });
@@ -463,15 +451,16 @@ export default function useSendMedia({ roomId }: any) {
                         });
                     } else {
                         newSize = `${totalByte} ${format}`;
-                        return [...e, { id:errorId, size: newSize }];
+                        return [...e, { id: errorId, size: newSize }];
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id: errorId }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendVideo', { _id: errorId, text: "", createdAt: oldMessage?.createdAt, user: oldMessage?.user, roomId, mimeType: oldMessage?.mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message,size: newSize, availableStatus: availableStatus.available }
+                        return { ...message, size: newSize, availableStatus: availableStatus.available }
                     } else {
                         return message
                     }
@@ -479,14 +468,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
-                console.log('error uploading file');
+                console.log('error uploading video');
             };
-            setProgress(e => e.filter(r => r.id !== errorId));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === errorId) {
@@ -496,12 +484,13 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== errorId));
         };
+        setProgress(e => e.filter(r => r.id !== errorId));
         return;
     };
 
     const ReSendMusic = async ({ errorId }: { errorId?: string | number }) => {
+        console.log('reSend')
         if (!errorId) return;
         try {
             setMessages(e => e.map(message => {
@@ -532,15 +521,16 @@ export default function useSendMedia({ roomId }: any) {
                         });
                     } else {
                         newSize = `${totalByte} ${format}`;
-                        return [...e, { id:errorId, size: newSize }];
+                        return [...e, { id: errorId, size: newSize }];
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id: errorId }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendAudio', { _id: errorId, text: "", createdAt: oldMessage?.createdAt, user: oldMessage?.user, roomId, fileName: oldMessage?.fileName, duration: oldMessage?.duration, mimeType: oldMessage?.mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message,size: newSize, availableStatus: availableStatus.available }
+                        return { ...message, size: newSize, availableStatus: availableStatus.available }
                     } else {
                         return message
                     }
@@ -548,14 +538,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
-                console.log('error uploading file');
+                console.log('error uploading music');
             };
-            setProgress(e => e.filter(r => r.id !== errorId));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === errorId) {
@@ -565,8 +554,8 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== errorId));
         };
+        setProgress(e => e.filter(r => r.id !== errorId));
         return;
     };
 
@@ -601,15 +590,16 @@ export default function useSendMedia({ roomId }: any) {
                         });
                     } else {
                         newSize = `${totalByte} ${format}`;
-                        return [...e, { id:errorId, size: newSize }];
+                        return [...e, { id: errorId, size: newSize }];
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id: errorId }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendFile', { _id: errorId, text: "", createdAt: oldMessage?.createdAt, user: oldMessage?.user, roomId, fileName: oldMessage?.fileName, mimeType: oldMessage?.mimeType, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message,size: newSize, availableStatus: availableStatus.available }
+                        return { ...message, size: newSize, availableStatus: availableStatus.available }
                     } else {
                         return message
                     }
@@ -617,14 +607,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
                 console.log('error uploading file');
             };
-            setProgress(e => e.filter(r => r.id !== errorId));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === errorId) {
@@ -634,8 +623,8 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== errorId));
         };
+        setProgress(e => e.filter(r => r.id !== errorId));
         return;
     };
 
@@ -670,15 +659,16 @@ export default function useSendMedia({ roomId }: any) {
                         });
                     } else {
                         newSize = `${totalByte} ${format}`;
-                        return [...e, { id:errorId, size: newSize }];
+                        return [...e, { id: errorId, size: newSize }];
                     }
                 });
             });
+            setTasks(state => [...state, { task: uploadTask, id: errorId }]);
             const response = await uploadTask.uploadAsync();
             if (response?.body === "ok") {
                 socket?.emit('sendAudio', { _id: errorId, text: "", createdAt: oldMessage?.createdAt, roomId, user: oldMessage?.user, fileName: "voice", duration: oldMessage?.duration, availableStatus: availableStatus.download }, setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message,size: newSize, availableStatus: availableStatus.available }
+                        return { ...message, size: newSize, availableStatus: availableStatus.available }
                     } else {
                         return message
                     }
@@ -686,14 +676,13 @@ export default function useSendMedia({ roomId }: any) {
             } else {
                 setMessages(e => e.map(message => {
                     if (message._id === errorId) {
-                        return { ...message, availableStatus: availableStatus.error }
+                        return { ...message, size: newSize, availableStatus: availableStatus.cancel }
                     } else {
                         return message;
                     }
                 }));
                 console.log('error uploading file');
             };
-            setProgress(e => e.filter(r => r.id !== errorId));
         } catch (error) {
             setMessages(e => e.map(message => {
                 if (message._id === errorId) {
@@ -703,8 +692,8 @@ export default function useSendMedia({ roomId }: any) {
                 }
             }));
             console.error('Error occurred during upload:', error);
-            setProgress(e => e.filter(r => r.id !== errorId));
         };
+        setProgress(e => e.filter(r => r.id !== errorId));
         return;
     };
 

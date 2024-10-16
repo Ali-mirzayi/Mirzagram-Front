@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io-client';
-import { currentPosition, IMessagePro, LastMessageType, lastTrack, locales, player, playerStatus, remotePlayBackEnum, Room, transferredProgress, User, videoDuration } from './utils/types';
+import { currentPosition, currentTask, IMessagePro, LastMessageType, lastTrack, locales, player, playerStatus, remotePlayBackEnum, Room, transferredProgress, User, videoDuration } from './utils/types';
 import { create } from 'zustand';
 
 const initialCurrentPosition: currentPosition = {
@@ -15,20 +15,20 @@ const initialLastTrack: lastTrack = {
 };
 
 //@ts-ignore
-const useThrottle = (fn, delay) => {  
+const useThrottle = (fn, delay) => {
 	//@ts-ignore
-	let timeout;  
+	let timeout;
 	//@ts-ignore
-	return (...args) => {  
+	return (...args) => {
 		//@ts-ignore
-	  if (!timeout) {  
-		fn(...args);  
-		timeout = setTimeout(() => {  
-		  timeout = null;  
-		}, delay);  
-	  }  
-	};  
-  };
+		if (!timeout) {
+			fn(...args);
+			timeout = setTimeout(() => {
+				timeout = null;
+			}, delay);
+		}
+	};
+};
 
 interface useMessage {
 	messages: IMessagePro[] | [],
@@ -78,10 +78,6 @@ interface useIsOpen {
 	setOpen: (e: boolean) => void
 }
 
-interface useIsPlaying {
-	playerStatus: playerStatus
-	setPlayerStatus: (callback: (prev: playerStatus) => (playerStatus)) => void
-}
 interface useSetLocale {
 	locale: locales
 	setLocale: (callback: (prev: locales) => locales) => void;
@@ -96,6 +92,16 @@ interface useTransferredProgress {
 	progress: transferredProgress;
 	setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void;
 	setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void;
+};
+
+interface useSetCancellationId {
+	cancellationId?: string | number
+	setCancellationId: (callback: (prev: string | number | undefined) => string | number | undefined) => void;
+};
+
+interface useCurrentTask {
+	tasks: currentTask
+	setTasks: (callback: (prev: currentTask) => currentTask) => void;
 };
 
 export const useMessage = create<useMessage>()((set) => ({
@@ -154,11 +160,6 @@ export const useIsOpen = create<useIsOpen>()((set) => ({
 	setOpen: (e) => set({ open: e })
 }));
 
-export const useIsPlaying = create<useIsPlaying>()((set) => ({
-	playerStatus: { isPlaying: false, id: undefined },
-	setPlayerStatus: (callback) => set((state) => ({ playerStatus: callback(state.playerStatus) })),
-}));
-
 export const useSetLocale = create<useSetLocale>()((set) => ({
 	locale: 'fa',
 	setLocale: (callback) => set((state) => ({ locale: callback(state.locale) })),
@@ -171,8 +172,18 @@ export const useRemotePlayBack = create<useRemotePlayBack>()((set) => ({
 
 export const useTransferredProgress = create<useTransferredProgress>()((set) => ({
 	progress: [],
-	setProgressThrottled: useThrottle((callback:any) => set((state) => ({  
-		progress: callback(state.progress),  
-	  })), 1000),
+	setProgressThrottled: useThrottle((callback: any) => set((state) => ({
+		progress: callback(state.progress),
+	})), 700),
 	setProgress: (callback) => set((state) => ({ progress: callback(state.progress) })),
+}));
+
+export const useSetCancellationId = create<useSetCancellationId>()((set) => ({
+	cancellationId: undefined,
+	setCancellationId: (callback) => set((state) => ({ cancellationId: callback(state.cancellationId) })),
+}));
+
+export const useCurrentTask = create<useCurrentTask>()((set) => ({
+	tasks: [],
+	setTasks: (callback) => set((state) => ({ tasks: callback(state.tasks) })),
 }));

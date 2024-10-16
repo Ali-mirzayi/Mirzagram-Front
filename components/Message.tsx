@@ -4,10 +4,10 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { formatBytes, formatMillisecondsToTime } from "../utils/utils";
 import * as FileSystem from 'expo-file-system';
-import { Actions, ActionsProps, Bubble, BubbleProps, Composer, IMessage, InputToolbar, InputToolbarProps, MessageAudioProps, MessageImageProps, MessageProps, MessageVideoProps, Send, SendProps, Time, TimeProps } from "react-native-gifted-chat";
+import { Actions, ActionsProps, Bubble, BubbleProps, Composer, IMessage, InputToolbar, InputToolbarProps, MessageProps, Send, SendProps, Time, TimeProps } from "react-native-gifted-chat";
 import { ResizeMode, Video, Audio } from "expo-av";
 import { darkTheme } from "../utils/theme";
-import { availableStatus, IMessagePro, RecordingEnum, transferredProgress, User, videoDuration } from "../utils/types";
+import { availableStatus, currentTask, IMessagePro, RecordingEnum, transferredProgress } from "../utils/types";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
@@ -16,7 +16,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { fileDirectory } from "../utils/directories";
 import Lightbox from 'react-native-lightbox-v2';
 import { startActivityAsync } from 'expo-intent-launcher';
-import { save, sendMedia } from "./SendMedia";
+import { save } from "./SendMedia";
 import MovingText from "./MovingText";
 import { audioListType } from "../hooks/useAudioList";
 import { getAudioMetadata } from "@missingcore/audio-metadata";
@@ -27,11 +27,7 @@ import { sendFileProps, sendImageProps, sendVideoProps } from '../hooks/useSendM
 const wantedTags = ['artist', 'name', 'artwork'] as const;
 
 type RenderChatFooterProps = {
-	user: User,
-	socket: any,
 	translateY: any,
-	roomId: any,
-	setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void,
 	recording: RecordingEnum,
 	setRecording: React.Dispatch<React.SetStateAction<RecordingEnum>>,
 	colors: typeof darkTheme.colors,
@@ -43,7 +39,7 @@ type RenderChatFooterProps = {
 	SendFile: ({ uri, name, mimeType }: sendFileProps) => Promise<void>
 }
 
-export function RenderChatFooter({ user, socket, translateY, roomId, setMessages, recording, setRecording, colors, SendImage, SendVideo, pan, animatedStyles, SendFile }: RenderChatFooterProps) {
+export function RenderChatFooter({ translateY, recording, setRecording, colors, SendImage, SendVideo, pan, animatedStyles, SendFile }: RenderChatFooterProps) {
 	const handleCamera = async () => {
 		await ImagePicker.requestCameraPermissionsAsync();
 		let result = await ImagePicker.launchCameraAsync({
@@ -83,9 +79,16 @@ export function RenderChatFooter({ user, socket, translateY, roomId, setMessages
 		try {
 			const result = await DocumentPicker.getDocumentAsync({
 				type: "*/*",
+				multiple: true,
 			});
 			if (!result.canceled) {
-				SendFile({ uri: result.assets[0].uri, name: result.assets[0].name, mimeType: result.assets[0].mimeType });
+				for await (const asset of result.assets) {
+					await SendFile({
+						uri: asset.uri,
+						name: asset.name,
+						mimeType: asset.mimeType
+					});
+				}
 			};
 		} catch (error) {
 			console.log(error);
@@ -202,32 +205,51 @@ export function renderTime(props: TimeProps<IMessage>, { colors }: { colors: typ
 		/>)
 };
 
-type renderMessageImageProps = { ReSendImage: ({ errorId }: { errorId?: string | number }) => Promise<void>, setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void, colors: typeof darkTheme.colors, progress: transferredProgress, setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void, setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void };
-type renderMessageVideoProps = { ReSendVideo: ({ errorId }: { errorId?: string | number }) => Promise<void>, setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void, colors: typeof darkTheme.colors, videoRef: React.MutableRefObject<Video>, progress: transferredProgress, setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void, setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void };
-type renderMessageFileProps = { ReSendFile: ({ errorId }: { errorId?: string | number }) => Promise<void>, setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void, colors: typeof darkTheme.colors, progress: transferredProgress, setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void, setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void };
+type renderMessageImageProps = {
+	ReSendImage: ({ errorId }: { errorId?: string | number }) => Promise<void>,
+	setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void,
+	colors: typeof darkTheme.colors, progress: transferredProgress,
+	setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setCancellationId: (callback: (prev: string | number | undefined) => string | number | undefined) => void,
+	setTasks: (callback: (prev: currentTask) => currentTask) => void
+};
+type renderMessageVideoProps = {
+	ReSendVideo: ({ errorId }: { errorId?: string | number }) => Promise<void>,
+	setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void,
+	colors: typeof darkTheme.colors,
+	videoRef: React.MutableRefObject<Video>,
+	progress: transferredProgress,
+	setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setCancellationId: (callback: (prev: string | number | undefined) => string | number | undefined) => void,
+	setTasks: (callback: (prev: currentTask) => currentTask) => void
+};
+type renderMessageFileProps = {
+	ReSendFile: ({ errorId }: { errorId?: string | number }) => Promise<void>,
+	setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void,
+	colors: typeof darkTheme.colors,
+	progress: transferredProgress,
+	setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setCancellationId: (callback: (prev: string | number | undefined) => string | number | undefined) => void,
+	setTasks: (callback: (prev: currentTask) => currentTask) => void
+};
 type renderMessageAudioProps = {
 	setMessages: (callback: (prev: IMessagePro[] | []) => (IMessagePro[] | [])) => void,
 	colors: typeof darkTheme.colors,
-	startPlayingByItem: ({ item, isMessage }: {
-		item: audioListType;
-		isMessage?: boolean;
-	}) => Promise<void>,
-	stopPlaying: ({ isForStart, isEnded }: {
-		isForStart: boolean;
-		isEnded: boolean;
-	}) => Promise<void>,
-	ReSendMusic: ({ errorId }: {
-		errorId?: string | number;
-	}) => Promise<void>,
-	ReSendAudio: ({ errorId }: {
-		errorId?: string | number
-	}) => Promise<void>,
+	startPlayingByItem: ({ item, isMessage }: { item: audioListType, isMessage?: boolean }) => Promise<void>,
+	stopPlaying: ({ isForStart, isEnded }: { isForStart: boolean, isEnded: boolean }) => Promise<void>,
+	ReSendMusic: ({ errorId }: { errorId?: string | number }) => Promise<void>,
+	ReSendAudio: ({ errorId }: { errorId?: string | number }) => Promise<void>,
 	progress: transferredProgress,
 	setProgressThrottled: (callback: (prev: transferredProgress) => transferredProgress) => void,
-	setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void
+	setProgress: (callback: (prev: transferredProgress) => transferredProgress) => void,
+	setCancellationId: (callback: (prev: string | number | undefined) => string | number | undefined) => void,
+	setTasks: (callback: (prev: currentTask) => currentTask) => void
 };
 
-export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessages, colors, ReSendFile, progress, setProgressThrottled, setProgress }: renderMessageFileProps) => {
+export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessages, colors, ReSendFile, progress, setProgressThrottled, setProgress, setCancellationId, setTasks }: renderMessageFileProps) => {
 	const Message = props.currentMessage;
 	//@ts-ignore
 	const color = props.position === 'right' ? '#fff' : colors.text === "#F1F6F9" ? '#fff' : '#000';
@@ -257,8 +279,8 @@ export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessage
 		});
 	};
 
-	async function handlePress() {
-		if (Message?.file?.startsWith('file') || !Message?.file || !Message.fileName) return;
+	async function handleDownload() {
+		if (Message?.file?.startsWith('file') || !Message.fileName) return;
 		setMessages(e => e.map(message => {
 			if (message._id === Message._id) {
 				return { ...message, availableStatus: availableStatus.downloading }
@@ -266,28 +288,44 @@ export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessage
 				return message
 			}
 		}));
+		//@ts-ignore
 		const downloadResumable = FileSystem.createDownloadResumable(Message?.file, fileDirectory + Message.fileName,
 			{},
 			callback
 		);
+		setTasks(state => [...state, { task: downloadResumable, id: Message._id }]);
 		await downloadResumable.downloadAsync().then(result => {
-			const newFile = fileDirectory + Message.fileName;
+			if (result) {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, file: result?.uri, size: newSize, availableStatus: availableStatus.available, mimeType: result?.headers["Content-Type"] }
+					} else {
+						return message
+					}
+				}));
+			} else {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+					} else {
+						return message
+					}
+				}));
+			}
+		}).catch(() => {
 			setMessages(e => e.map(message => {
 				if (message._id === Message._id) {
-					return { ...message, file: newFile, size: newSize, availableStatus: availableStatus.available }
+					return { ...message, size: newSize, availableStatus: availableStatus.error }
 				} else {
 					return message
 				}
 			}));
-		})
-			.catch(error => {
-				console.error(error, 'errrrrrrrr');
-			})
+		});
 		setProgress((e: any) => e.filter((r: any) => r.id !== Message._id));
 	};
 
 	const openFile = async () => {
-		if (!Message?.file?.startsWith('file') || !Message?.file) return;
+		if (!Message?.file?.startsWith('file')) return;
 		const contentURL = await FileSystem.getContentUriAsync(Message.file);
 		try {
 			await startActivityAsync('android.intent.action.VIEW', {
@@ -300,21 +338,42 @@ export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessage
 		}
 	};
 
+	const handleCancel = () => {
+		setCancellationId((state) => {
+			if (state === undefined) {
+				return Message._id
+			}
+		});
+		setMessages(e => e.map(message => {
+			if (message._id === Message._id) {
+				return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+			} else {
+				return message
+			}
+		}));
+	};
+
 	let finalMode = undefined;
 
-	const TransferMode = (<ActivityIndicator style={[styles.iconContainer, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />);
+	const TransferMode = (<TouchableOpacity onPress={handleCancel} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
+			<ActivityIndicator style={[styles.iconContainer, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />
+		</TouchableOpacity>);
 
 	const AvailableMode = (<TouchableHighlight onPress={openFile} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
 		<Feather name="file" size={28} color="#fff" />
 	</TouchableHighlight>);
 
-	const DownloadMode = (<TouchableHighlight onPress={handlePress} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
+	const DownloadMode = (<TouchableHighlight onPress={handleDownload} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
 		<MaterialCommunityIcons name="download" size={34} color="#fff" />
 	</TouchableHighlight>);
 
-	const ErrorMode = (<TouchableOpacity onPress={() => ReSendFile({ errorId: Message?._id })} style={[styles.iconContainer, { backgroundColor: colors.red }]}>
+	const ErrorMode = (<TouchableOpacity onPress={() => { props.user.name === Message.user.name ? ReSendFile({ errorId: Message?._id }) : handleDownload() }} style={[styles.iconContainer, { backgroundColor: colors.red }]}>
 		<FontAwesome6 name="exclamation" size={40} color="#fff" />
 	</TouchableOpacity>);
+
+	const UploadMode = (<TouchableHighlight onPress={() => ReSendFile({ errorId: Message?._id })} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
+		<MaterialCommunityIcons name="upload" size={34} color="#fff" />
+	</TouchableHighlight>);
 
 	switch (messageStatus) {
 		case availableStatus.available:
@@ -331,6 +390,9 @@ export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessage
 			break;
 		case availableStatus.error:
 			finalMode = ErrorMode;
+			break;
+		case availableStatus.cancel:
+			finalMode = props.user._id === Message.user._id ? UploadMode : DownloadMode;
 			break;
 		default:
 			finalMode = AvailableMode;
@@ -348,21 +410,22 @@ export const renderMessageFile = (props: MessageProps<IMessagePro>, { setMessage
 					</View>
 					<View style={{ marginLeft: 0, marginRight: 'auto', width: 130, overflow: 'hidden' }}>
 						<MovingText disable={false} animationThreshold={15} style={[{ color: color, size: 10 }]}>{Message?.fileName ? Message?.fileName : 'Voice'}</MovingText>
-						<Text style={{ color: color }}>{size}</Text>
+						<Text style={{ color: color, fontFamily: "Vazirmatn-SemiBold" }}>{size}</Text>
 					</View>
 				</View>
-				{messageStatus === availableStatus.available ? <Pressable style={{ marginLeft: "auto", paddingRight: 10, paddingBottom: 5 }} onPress={() => save({ uri: Message ? Message?.file : undefined })}>
-					<Text style={{ color: color, fontWeight: '600', fontSize: 16 }}>Save</Text>
+				{messageStatus === availableStatus.available ? <Pressable style={{ marginLeft: "auto", paddingRight: 10, paddingBottom: 5 }} onPress={() => save({ uri: Message ? Message?.file : undefined, mimeType: Message?.mimeType, fileName: Message?.fileName })}>
+					<Text style={{ color: color, fontSize: 16, fontFamily: "Vazirmatn-SemiBold" }}>Save</Text>
 				</Pressable> : null}
 			</>
 		)
 	}
 };
 
-export const RenderMessageImage = (props: MessageImageProps<IMessagePro>, { setMessages, colors, ReSendImage, progress, setProgressThrottled, setProgress }: renderMessageImageProps) => {
+export const RenderMessageImage = (props: any, { setMessages, colors, ReSendImage, progress, setProgressThrottled, setProgress, setCancellationId, setTasks }: renderMessageImageProps) => {
 	const Message = props.currentMessage;
+	if (!Message?.image) return;
+
 	const messageStatus = Message.availableStatus;
-	//@ts-ignore
 	const color = props.position === 'right' ? '#fff' : colors.text === "#F1F6F9" ? '#fff' : '#000';
 	const selectedProgress = progress.find(e => e.id === Message._id);
 	let newSize = '0';
@@ -389,8 +452,8 @@ export const RenderMessageImage = (props: MessageImageProps<IMessagePro>, { setM
 		});
 	};
 
-	async function handlePress() {
-		if (Message?.image?.startsWith('file') || !Message?.image || !Message.fileName) return;
+	async function handleDownload() {
+		if (Message?.image?.startsWith('file') || !Message.fileName) return;
 		setMessages(e => e.map(message => {
 			if (message._id === Message._id) {
 				return { ...message, availableStatus: availableStatus.downloading }
@@ -402,32 +465,70 @@ export const RenderMessageImage = (props: MessageImageProps<IMessagePro>, { setM
 			{},
 			callback
 		);
+		setTasks(state => [...state, { task: downloadResumable, id: Message._id }]);
 		await downloadResumable.downloadAsync().then(result => {
-			const newImage = fileDirectory + Message.fileName;
+			if (result) {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, size: newSize, image: result?.uri, availableStatus: availableStatus.available, mimeType: result?.headers["Content-Type"] }
+					} else {
+						return message
+					}
+				}));
+			} else {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+					} else {
+						return message
+					}
+				}));
+			}
+		}).catch(() => {
 			setMessages(e => e.map(message => {
 				if (message._id === Message._id) {
-					return { ...message, size: newSize, image: newImage, availableStatus: availableStatus.available }
+					return { ...message, size: newSize, availableStatus: availableStatus.error }
 				} else {
 					return message
 				}
 			}));
-		}).catch(error => {
-			console.error(error, 'errrrrrrrr');
 		});
 		setProgress((e: any) => e.filter((r: any) => r.id !== Message._id));
 	};
 
+	const handleCancel = () => {
+		setCancellationId((state) => {
+			if (state === undefined) {
+				return Message._id
+			}
+		});
+		setMessages(e => e.map(message => {
+			if (message._id === Message._id) {
+				return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+			} else {
+				return message
+			}
+		}));
+	};
+
 	let finalMode = undefined;
 
-	const TransferMode = (<ActivityIndicator style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />);
+	const TransferMode = (<TouchableHighlight onPress={handleCancel} style={[styles.iconContainer, styles.downloadImg, { backgroundColor: colors.undetlay }]}>
+		<ActivityIndicator style={[styles.iconContainer, styles.downloadImg, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />
+	</TouchableHighlight>
+	);
 
-	const DownloadMode = (<TouchableOpacity onPress={handlePress} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]}>
+	const DownloadMode = (<TouchableOpacity onPress={handleDownload} style={[styles.iconContainer, styles.downloadImg, { backgroundColor: colors.undetlay }]}>
 		<MaterialCommunityIcons name="download" size={34} color="#fff" />
 	</TouchableOpacity>);
 
-	const ErrorMode = (<TouchableOpacity onPress={() => ReSendImage({ errorId: Message?._id })} style={[styles.iconContainer, styles.download, { backgroundColor: colors.red }]}>
+	const ErrorMode = (<TouchableOpacity onPress={() => { props.user.name === Message.user.name ? ReSendImage({ errorId: Message?._id }) : handleDownload() }} style={[styles.iconContainer, styles.downloadImg, { backgroundColor: colors.red }]}>
 		<FontAwesome6 name="exclamation" size={40} color="#fff" />
 	</TouchableOpacity>);
+
+	const UploadMode = (<TouchableHighlight onPress={() => ReSendImage({ errorId: Message?._id })} style={[styles.iconContainer, styles.downloadImg, { backgroundColor: colors.undetlay }]}>
+		<MaterialCommunityIcons name="upload" size={34} color="#fff" />
+	</TouchableHighlight>);
 
 	switch (messageStatus) {
 		case availableStatus.download:
@@ -442,6 +543,9 @@ export const RenderMessageImage = (props: MessageImageProps<IMessagePro>, { setM
 		case availableStatus.error:
 			finalMode = ErrorMode;
 			break;
+		case availableStatus.cancel:
+			finalMode = props.user._id === Message.user._id ? UploadMode : DownloadMode;
+			break;
 		default:
 			break;
 	};
@@ -450,13 +554,12 @@ export const RenderMessageImage = (props: MessageImageProps<IMessagePro>, { setM
 
 	return (
 		<View style={[props.containerStyle, { zIndex: 10, position: 'relative' }]}>
-			{/* @ts-ignore */}
 			<Lightbox
 				activeProps={{
 					style: styles.imageActive,
 				}}
 				{...props.lightboxProps}
-				onOpen={handlePress}
+				onOpen={handleDownload}
 			>
 				<Image
 					{...props.imageProps}
@@ -467,23 +570,24 @@ export const RenderMessageImage = (props: MessageImageProps<IMessagePro>, { setM
 			</Lightbox>
 			{finalMode}
 			<View style={{ backgroundColor: 'rgba(52, 52, 52, 0.5)', position: "absolute", top: 7, left: 7, paddingVertical: 4, paddingHorizontal: 7, borderRadius: 7 }}>
-				{size ? <Text style={{ color: '#fff', fontSize: 13 }}>{size}</Text> : null}
+				{size ? <Text style={{ color: '#fff', fontSize: 13, fontFamily: "Vazirmatn-SemiBold" }}>{size}</Text> : null}
 			</View>
 			{messageStatus === availableStatus.available ? <Pressable style={{ marginRight: 4, padding: 5 }} onPress={() => save({ uri: Message ? Message?.image : undefined })}>
-				<Text style={{ color: color, fontWeight: '600', fontSize: 16 }}>Save</Text>
+				<Text style={{ color: color, fontSize: 16, fontFamily: "Vazirmatn-SemiBold" }}>Save</Text>
 			</Pressable> : null}
 		</View>
 	)
 };
 
-export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setMessages, videoRef, colors, ReSendVideo, progress, setProgress, setProgressThrottled }: renderMessageVideoProps) {
+export function renderMessageVideo(props: any, { setMessages, videoRef, colors, ReSendVideo, progress, setProgress, setProgressThrottled, setCancellationId, setTasks }: renderMessageVideoProps) {
 	const Message = props.currentMessage;
+	if (!Message?.video) return;
+
 	const messageStatus = Message.availableStatus;
 	const selectedProgress = progress.find(e => e.id === Message._id);
 	let newSize = '0';
 
 	const duration = Message.duration;
-	//@ts-ignore
 	const color = props.position === 'right' ? '#fff' : colors.text === "#F1F6F9" ? '#fff' : '#000';
 
 	const callback = ({ totalBytesWritten, totalBytesExpectedToWrite }: { totalBytesWritten: number, totalBytesExpectedToWrite: number }) => {
@@ -508,8 +612,8 @@ export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setM
 		});
 	};
 
-	async function handlePress() {
-		if (Message?.video?.startsWith('file') || !Message?.video || !Message.fileName) return;
+	async function handleDownload() {
+		if (Message?.video?.startsWith('file') || !Message.fileName) return;
 		setMessages(e => e.map(message => {
 			if (message._id === Message._id) {
 				return { ...message, availableStatus: availableStatus.downloading }
@@ -517,25 +621,54 @@ export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setM
 				return message
 			}
 		}));
-
 		const downloadResumable = FileSystem.createDownloadResumable(Message?.video, fileDirectory + Message.fileName,
 			{},
 			callback
 		);
-
-		await downloadResumable.downloadAsync().then(() => {
-			const newVideo = fileDirectory + Message.fileName;
+		setTasks(state => [...state, { task: downloadResumable, id: Message._id }]);
+		await downloadResumable.downloadAsync().then((result) => {
+			if (result) {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, size: newSize, video: result?.uri, availableStatus: availableStatus.available, mimeType: result?.headers["Content-Type"] }
+					} else {
+						return message
+					}
+				}));
+			} else {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+					} else {
+						return message
+					}
+				}));
+			}
+		}).catch(() => {
 			setMessages(e => e.map(message => {
 				if (message._id === Message._id) {
-					return { ...message, size: newSize, video: newVideo, availableStatus: availableStatus.available }
+					return { ...message, size: newSize, availableStatus: availableStatus.error }
 				} else {
 					return message
 				}
 			}));
-		}).catch(error => {
-			console.error(error, 'errrrrrrrr');
 		});
 		setProgress((e: any) => e.filter((r: any) => r.id !== Message._id));
+	};
+
+	const handleCancel = async () => {
+		setCancellationId((state) => {
+			if (state === undefined) {
+				return Message._id
+			}
+		});
+		setMessages(e => e.map(message => {
+			if (message._id === Message._id) {
+				return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+			} else {
+				return message
+			}
+		}));
 	};
 
 	const onPlayVideo = () => {
@@ -545,19 +678,27 @@ export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setM
 
 	let finalMode = undefined;
 
-	const TransferMode = (<ActivityIndicator style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />);
+	const TransferMode = (
+		<TouchableHighlight onPress={handleCancel} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]}>
+			<ActivityIndicator style={[styles.iconContainer, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />
+		</TouchableHighlight>
+	);
 
-	const DownloadMode = (<TouchableHighlight onPress={handlePress} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]}>
+	const DownloadMode = (<TouchableHighlight onPress={handleDownload} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]}>
 		<MaterialCommunityIcons name="download" size={34} color="#fff" />
 	</TouchableHighlight>);
 
-	const AvailableMode = (<TouchableHighlight onPress={onPlayVideo} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay, zIndex: 0 }]}>
-		<Ionicons name={"play"} size={30} color="#fff" style={{ marginRight: -4 }} />
+	const AvailableMode = (<TouchableHighlight onPress={onPlayVideo} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]}>
+		<Ionicons name={"play"} size={30} color="#fff" />
 	</TouchableHighlight>);
 
-	const ErrorMode = (<TouchableOpacity onPress={() => ReSendVideo({ errorId: Message?._id })} style={[styles.iconContainer, styles.download, { backgroundColor: colors.red }]}>
+	const ErrorMode = (<TouchableOpacity onPress={() => { props.user.name === Message.user.name ? ReSendVideo({ errorId: Message?._id }) : handleDownload() }} style={[styles.iconContainer, styles.download, { backgroundColor: colors.red }]}>
 		<FontAwesome6 name="exclamation" size={40} color="#fff" />
 	</TouchableOpacity>);
+
+	const UploadMode = (<TouchableHighlight onPress={() => ReSendVideo({ errorId: Message._id })} style={[styles.iconContainer, styles.download, { backgroundColor: colors.undetlay }]}>
+		<MaterialCommunityIcons name="upload" size={34} color="#fff" />
+	</TouchableHighlight>);
 
 	switch (messageStatus) {
 		case availableStatus.available:
@@ -575,6 +716,9 @@ export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setM
 		case availableStatus.error:
 			finalMode = ErrorMode;
 			break;
+		case availableStatus.cancel:
+			finalMode = props.user._id === Message.user._id ? UploadMode : DownloadMode;
+			break;
 		default:
 			finalMode = AvailableMode;
 			break;
@@ -582,7 +726,7 @@ export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setM
 
 	const CustomPosterComponent = ({ source, style }: { source: ImageProps["source"], style: ImageProps["style"] }) => {
 		return (
-			<TouchableHighlight style={[{ zIndex: 10, position: 'relative' }, style]} onPress={handlePress}>
+			<TouchableHighlight style={[{ zIndex: 10, position: 'relative' }, style]} onPress={handleDownload}>
 				<View style={[{ zIndex: 10, position: 'relative' }, style]}>
 					<Image
 						source={source}
@@ -644,19 +788,21 @@ export function renderMessageVideo(props: MessageVideoProps<IMessagePro>, { setM
 					finalMode
 				}
 				<View style={{ backgroundColor: 'rgba(52, 52, 52, 0.5)', position: "absolute", top: 7, left: 7, paddingVertical: 3, paddingHorizontal: 5, borderRadius: 7 }}>
-					<Text style={{ color: '#fff', fontSize: 13 }}>{formatMillisecondsToTime(duration) ?? "Video"}</Text>
-					{size ? <Text style={{ color: '#fff', fontSize: 13 }}>{size}</Text> : null}
+					<Text style={{ color: '#fff', fontSize: 13, fontFamily: "Vazirmatn-SemiBold" }}>{formatMillisecondsToTime(duration) ?? "Video"}</Text>
+					{size ? <Text style={{ color: '#fff', fontSize: 13, fontFamily: "Vazirmatn-SemiBold" }}>{size}</Text> : null}
 				</View>
 			</Pressable>
 			{messageStatus === availableStatus.available ? <Pressable style={{ marginRight: 4, padding: 5 }} onPress={() => save({ uri: Message ? Message?.video : undefined })}>
-				<Text style={{ color: color, fontWeight: '600', fontSize: 16 }}>Save</Text>
+				<Text style={{ color: color, fontSize: 16, fontFamily: "Vazirmatn-SemiBold" }}>Save</Text>
 			</Pressable> : null}
 		</>
 	)
 };
 
-export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setMessages, colors, startPlayingByItem, stopPlaying, ReSendMusic, ReSendAudio, progress, setProgressThrottled, setProgress }: renderMessageAudioProps) => {
+export const renderMessageAudio = (props: any, { setMessages, colors, startPlayingByItem, stopPlaying, ReSendMusic, ReSendAudio, progress, setProgressThrottled, setProgress, setCancellationId, setTasks }: renderMessageAudioProps) => {
 	const Message = props.currentMessage;
+	if (!Message?.audio) return;
+
 	const isPlaying = Message.playing;
 	const messageStatus = Message.availableStatus;
 	const selectedProgress = progress.find(e => e.id === Message._id);
@@ -684,8 +830,8 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 		});
 	};
 
-	async function handlePress() {
-		if (Message?.file?.startsWith('file') || !Message?.audio || !Message.fileName) return;
+	async function handleDownload() {
+		if (Message?.audio?.startsWith('file') || !Message.fileName) return;
 		setMessages(e => e.map(message => {
 			if (message._id === Message._id) {
 				return { ...message, availableStatus: availableStatus.downloading }
@@ -693,15 +839,24 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 				return message
 			}
 		}));
-		const newFile = fileDirectory + Message.fileName;
 		try {
 			const downloadResumable = FileSystem.createDownloadResumable(Message?.audio, fileDirectory + Message.fileName,
 				{},
 				callback
 			);
-
-			await downloadResumable.downloadAsync();
-			const data = await getAudioMetadata(newFile, wantedTags).catch(e => console.log(e));
+			setTasks(state => [...state, { task: downloadResumable, id: Message._id }]);
+			const result = await downloadResumable.downloadAsync();
+			if (!result?.uri) {
+				setMessages(e => e.map(message => {
+					if (message._id === Message._id) {
+						return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+					} else {
+						return message
+					}
+				}));
+				return;
+			};
+			const data = await getAudioMetadata(result.uri, wantedTags).catch(e => console.log(e));
 			let artwork = data?.metadata.artwork?.replace(/^data:image\/[^;]+;base64,/, '');
 			if (artwork) {
 				await FileSystem.writeAsStringAsync(fileDirectory + `${Message.fileName}-artwork.jpeg`, artwork, { encoding: "base64" }).then(() => {
@@ -712,12 +867,12 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 			}
 
 			if (!Message.duration) {
-				const { sound, status } = await Audio.Sound.createAsync({ uri: newFile }, { shouldPlay: false });
+				const { sound, status } = await Audio.Sound.createAsync({ uri: result.uri }, { shouldPlay: false });
 				//@ts-ignore
 				const duration: number = status?.durationMillis / 1000;
 				setMessages((prevMessages: IMessagePro[]) => (prevMessages.map(e => {
 					if (e._id === Message._id) {
-						return { ...e, size: newSize, duration, artwork: artwork?.startsWith('file') ? artwork : undefined, musicArtist: data?.metadata.artist ?? '', musicName: data?.metadata.name ?? Message.fileName };
+						return { ...e, size: newSize, audio: result.uri, duration, artwork: artwork?.startsWith('file') ? artwork : undefined, musicArtist: data?.metadata.artist ?? '', musicName: data?.metadata.name ?? Message.fileName, mimeType: result?.headers["Content-Type"] };
 					} else {
 						return e;
 					}
@@ -726,7 +881,7 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 			} else {
 				setMessages(e => e.map(message => {
 					if (message._id === Message._id) {
-						return { ...message, size: newSize, audio: newFile, availableStatus: availableStatus.available, artwork: artwork?.startsWith('file') ? artwork : undefined, musicArtist: data?.metadata.artist ?? '', musicName: data?.metadata.name ?? Message.fileName };
+						return { ...message, size: newSize, audio: result.uri, availableStatus: availableStatus.available, artwork: artwork?.startsWith('file') ? artwork : undefined, musicArtist: data?.metadata.artist ?? '', musicName: data?.metadata.name ?? Message.fileName, mimeType: result?.headers["Content-Type"] };
 					} else {
 						return message;
 					}
@@ -734,29 +889,69 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 			};
 			setProgress((e: any) => e.filter((r: any) => r.id !== Message._id));
 		} catch (error) {
-			console.error(error, 'errrrrrrrr');
+			setMessages(e => e.map(message => {
+				if (message._id === Message._id) {
+					return { ...message, size: newSize, availableStatus: availableStatus.error }
+				} else {
+					return message
+				}
+			}));
 		}
 	};
 
-	//@ts-ignore
+	const handleCancel = async () => {
+		setCancellationId((state) => {
+			if (state === undefined) {
+				return Message._id
+			}
+		});
+		setMessages(e => e.map(message => {
+			if (message._id === Message._id) {
+				return { ...message, size: newSize, availableStatus: availableStatus.cancel }
+			} else {
+				return message
+			}
+		}));
+	};
+
+	const handleErrorMode = () => {
+		if (props.user.name === Message.user.name) {
+			if (Message?.fileName === "voice") {
+				ReSendAudio({ errorId: Message?._id });
+			} else {
+				ReSendMusic({ errorId: Message?._id });
+			}
+		} else {
+			handleDownload();
+		}
+	}
+
 	const color = props.position === 'right' ? '#fff' : colors.text === "#F1F6F9" ? '#fff' : '#000';
 	const time = formatMillisecondsToTime(Message?.duration);
 
 	let finalMode = undefined;
 
-	const TransferMode = (<ActivityIndicator style={[styles.iconContainer, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />);
+	const TransferMode = (
+		<TouchableOpacity onPress={handleCancel} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
+			<ActivityIndicator style={[styles.iconContainer, { backgroundColor: colors.undetlay }]} size="large" color="#fff" />
+		</TouchableOpacity>
+	);
 
 	const AvailableMode = (<TouchableHighlight onPress={isPlaying ? () => stopPlaying({ isForStart: false, isEnded: false }) : () => startPlayingByItem({ item: { audioName: Message.musicName ?? "", id: Message._id, uri: Message.audio ?? '', artist: Message.musicArtist, artwork: Message.artwork }, isMessage: true })} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
 		<Ionicons name={isPlaying ? "pause" : "play"} size={30} color="#fff" style={{ marginRight: isPlaying ? 0 : -4 }} />
 	</TouchableHighlight>);
 
-	const DownloadMode = (<TouchableHighlight onPress={handlePress} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
+	const DownloadMode = (<TouchableHighlight onPress={handleDownload} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
 		<MaterialCommunityIcons name="download" size={34} color="#fff" />
 	</TouchableHighlight>);
 
-	const ErrorMode = (<TouchableOpacity onPress={() => { Message?.fileName === "voice" ? ReSendAudio({ errorId: Message?._id }) : ReSendMusic({ errorId: Message?._id }) }} style={[styles.iconContainer, { backgroundColor: colors.red }]}>
+	const ErrorMode = (<TouchableOpacity onPress={handleErrorMode} style={[styles.iconContainer, { backgroundColor: colors.red }]}>
 		<FontAwesome6 name="exclamation" size={40} color="#fff" />
 	</TouchableOpacity>);
+
+	const UploadMode = (<TouchableHighlight onPress={() => { Message?.fileName === "voice" ? ReSendAudio({ errorId: Message?._id }) : ReSendMusic({ errorId: Message?._id }) }} style={[styles.iconContainer, { backgroundColor: colors.undetlay }]}>
+		<MaterialCommunityIcons name="upload" size={34} color="#fff" />
+	</TouchableHighlight>);
 
 	switch (messageStatus) {
 		case availableStatus.available:
@@ -774,6 +969,9 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 		case availableStatus.error:
 			finalMode = ErrorMode;
 			break;
+		case availableStatus.cancel:
+			finalMode = props.user._id === Message.user._id ? UploadMode : DownloadMode;
+			break;
 		default:
 			finalMode = AvailableMode;
 			break;
@@ -789,14 +987,14 @@ export const renderMessageAudio = (props: MessageAudioProps<IMessagePro>, { setM
 				</View>
 				<View style={{ marginLeft: 0, marginRight: 'auto', width: 130, overflow: 'hidden' }}>
 					<MovingText disable={isPlaying ? false : true} animationThreshold={15} style={[{ color: color, size: 10 }]}>{Message?.musicName ? Message?.musicName : Message?.fileName ? Message?.fileName : 'Voice'}</MovingText>
-					<Text numberOfLines={1} style={[{ color: color, fontSize: 12 }]}>{Message?.musicArtist ? Message?.musicArtist : ''}</Text>
-					<Text style={{ color: color }}>{size}</Text>
+					<Text numberOfLines={1} style={[{ color: color, fontSize: 12, fontFamily: "Vazirmatn-SemiBold" }]}>{Message?.musicArtist ? Message?.musicArtist : ''}</Text>
+					{size ? <Text style={{ color: color, fontFamily: "Vazirmatn-SemiBold" }}>{size}</Text> : null}
 				</View>
 			</View>
 			<View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end', gap: 10, paddingRight: 10, marginBottom: 5 }}>
-				<Text style={{ color, fontWeight: '500', fontSize: 14 }}>{time}</Text>
+				<Text style={{ color, fontSize: 14, fontFamily: "Vazirmatn-SemiBold" }}>{time}</Text>
 				{messageStatus === availableStatus.available ? <Pressable onPress={() => save({ uri: Message ? Message?.audio : undefined })}>
-					<Text style={{ color, fontWeight: '600', fontSize: 16 }}>Save</Text>
+					<Text style={{ color, fontSize: 16, fontFamily: "Vazirmatn-SemiBold" }}>Save</Text>
 				</Pressable> : null}
 			</View>
 		</>
@@ -894,8 +1092,12 @@ const styles = StyleSheet.create({
 		position: 'absolute',
 		left: 75,
 		top: 40,
-		// left: 52,
-		// top: 30,
+		zIndex: 50
+	},
+	downloadImg: {
+		position: 'absolute',
+		left: 52,
+		top: 30,
 		zIndex: 50
 	}
 });

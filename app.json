@@ -1,0 +1,90 @@
+{
+  "expo": {
+    "name": "Mirzagram",
+    "slug": "my-app",
+    "version": "1.6.5",
+    "orientation": "portrait",
+    "icon": "./assets/mirza256clean.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/mirza512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#dadef0"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/mirza256clean.png",
+        "backgroundColor": "#dadef0"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "WAKE_LOCK"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "package": "com.services.mirzagram",
+      "userInterfaceStyle": "automatic",
+      "versionCode": 8
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "./plugins/withDisableForcedDarkModeAndroid.js",
+        {}
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends.",
+          "cameraPermission": "The app accesses your camera to let you share them with your friends",
+          "microphonePermission": "The app accesses your microphone to let you share them with your friends"
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Vazirmatn-Black.ttf",
+            "./assets/fonts/Vazirmatn-Bold.ttf",
+            "./assets/fonts/Vazirmatn-Light.ttf",
+            "./assets/fonts/Vazirmatn-Medium.ttf",
+            "./assets/fonts/Vazirmatn-Regular.ttf",
+            "./assets/fonts/Vazirmatn-SemiBold.ttf",
+            "./assets/fonts/Vazirmatn-Thin.ttf"
+          ]
+        }
+      ],
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "38707324-7b74-4638-b9e8-09ba20663327"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/38707324-7b74-4638-b9e8-09ba20663327"
+    }
+  }
+}

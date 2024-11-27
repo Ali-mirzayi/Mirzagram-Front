@@ -1,0 +1,21 @@
+{
+	"hello": "hello %{name}!",
+    "MirzaGram":"MirzaGram",
+    "Chatsafely":"Chat safely without server database",
+    "ProtectPrivacy":"We protect you privacy",
+    "roll":"let's roll",
+    "SignIn":"Sign in to MirzaGram",
+    "EnterUsername":"please enter a username",
+    "Username":"username",
+    "LetChat":"Let's Chat",
+    "switchLang": "Change Language",
+    "RemoveData":"Remove all data after leave app",
+    "NoRooms":"No rooms created!",
+    "SearchToconnection":"Search and make some connection",
+    "SearchUser":"Search Users",
+    "UserAvailable":"User Is Not Available",
+    "MessageNotification":"Send a Message with Notification",
+    "Send":"Send",
+    "Ihere":"I`m here",
+    "OpenMyket":"Open Myket"
+}
